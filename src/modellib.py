@@ -6,7 +6,7 @@ from torch.autograd import Variable
 import copy
 
 import transformers
-from longformer.longformer import Longformer, LongformerConfig
+#from longformer.longformer import Longformer, LongformerConfig
 from transformers import LongformerModel
 model = LongformerModel.from_pretrained('allenai/longformer-base-4096', gradient_checkpointing=True)
 
@@ -52,4 +52,3 @@ class QDSTModel(torch.nn.Module):
         hidden = self.dropout(hidden)
         logit = self.final_layer(hidden)
         return logit
-
