@@ -255,7 +255,7 @@ class Corpus:
 
 
 class Data:
-    def __init__(self, multidoc2dial_dial, corpus, FLAGS):
+    def __init__(self, multidoc2dial_dial, corpus, FLAGS, set_flag):
         # Data-related hyperparameters.
         self.max_seq_len = FLAGS.max_seq_len
         self.max_sent_num = FLAGS.max_sent_num
@@ -342,18 +342,22 @@ class Data:
             self.candidates[qid] = self.candidates[qid][:100]
 
         '''
-        # Read top 50 candidates:
-        with open('/content/candidate.txt', 'r') as csvfile:
-           matrixreader = csv.reader(csvfile, delimiter=' ')
-           i = 0
-           for row in matrixreader:
+        if set_flag==1:
+           # Read top 50 candidates:
+           with open('/content/candidate.txt', 'r') as csvfile:
+              matrixreader = csv.reader(csvfile, delimiter=' ')
+              i = 0
+              for row in matrixreader:
               
-              qid = doc_label_test[i]
-              if i==0 or i==1:
-                  self.candidates[qid].append(self.corpus.titles)
-              else:
-                  self.candidates[qid].append(row)  
-              i += 1
+                 qid = doc_label_test[i]
+                 if i==0 or i==1:
+                     self.candidates[qid].append(self.corpus.titles)
+                 else:
+                     self.candidates[qid].append(row)  
+                 
+                 i += 1
+           print(i,":")
+           print(self.candidates[qid])
         '''
         # Validation.
         to_del = []
@@ -528,14 +532,18 @@ class Data:
         cur_batch = self.create_empty_batch()
         #for docid in self.candidates[qid]: #any text and thus any docid in corpus
         #for docid in returned_corpus.keys():
-        for docid in self.candidates[qid]:
-            #rel = self.qrels[(qid, docid)]
-            rel = 1  #dummy
-            if rel == 0 and onlyrel: continue
-            self.push_data_into_batch(rel, qid, docid, cur_batch)
-            if len(cur_batch['label']) >= self.batch_size:
-                yield self.to_tensor(cur_batch), cur_batch['rel']
-                cur_batch = self.create_empty_batch()
+        for row in self.candidates[qid]:
+            #print(row)
+            for j in range(50):
+                docid = row[j]
+
+                #rel = self.qrels[(qid, docid)]
+                rel = 1  #dummy
+                if rel == 0 and onlyrel: continue
+                self.push_data_into_batch(rel, qid, docid, cur_batch)
+                if len(cur_batch['label']) >= self.batch_size:
+                    yield self.to_tensor(cur_batch), cur_batch['rel']
+                    cur_batch = self.create_empty_batch()
 
         if len(cur_batch['label']) > 0:
             yield self.to_tensor(cur_batch), cur_batch['rel'] 
@@ -563,3 +571,4 @@ class Data:
 
         if len(cur_batch['label']) > 0:
             yield self.to_tensor(cur_batch)
+
