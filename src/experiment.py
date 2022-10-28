@@ -283,11 +283,12 @@ class Experiment:
                     for i in range(len(data['docid'])):
                         d = data['docid'][i]
                         checked.add(d)
+                '''
                 for d, r in eval_data.qrels_by_q[qid]:
                     if d not in checked:
                         y_pred_all.append(-1e+100)
                         y_true_all.append(int(r))
-
+                '''
                 evaler.eval(y_pred_all, y_true_all)
                 qid_cnt += 1
                 if qid_cnt % 10 == 0:
@@ -295,7 +296,7 @@ class Experiment:
                     with open('xxxx', 'w') as wp:
                         print(evaler.summary(), file=wp)
 
-        return evaler.summary()
+        return evaler.summary() 
 
 
     def eval_dump(self, eval_data, num_sample_eval, desc='', silent=False):
@@ -303,7 +304,7 @@ class Experiment:
         evaler = utils.Evaluater()
         feature_dict = {}
         hidden_feature_dict = {}
-        with open(self.pred_file, 'w') as wp:
+        with open('/content/QDS-Transformer/src/pred_file', 'w') as wp:
             with torch.no_grad():
                 for qid in tqdm(eval_data.get_qid_list(num_sample_eval),
                         desc=desc, ncols=80, disable=silent):
@@ -331,13 +332,13 @@ class Experiment:
                             q = qid
                             d = data['docid'][i]
                             checked.add(d)
-
+                    '''
                     for d, r in eval_data.qrels_by_q[qid]:
                         if d not in checked and r > 0:
                             y_pred_all.append(-1e+100)
                             y_true_all.append(int(r))
                             docid_all.append(d)
-
+                    '''
                     evaler.eval(y_pred_all, y_true_all)
 
                     assert(len(y_pred_all) == len(y_true_all) == len(docid_all))
@@ -353,6 +354,24 @@ class Experiment:
                         print('{} Q0 {} {} {} XXX'.format(
                             qid, docid_all[i], i + 1, y_pred_all[i]),
                             file=wp)
+                    '''
+                    sorted_y = sorted(y_pred_all, key=abs)  
+                    sorted_title = [] 
+                    for i in range(len(sorted_y)):
+                      ind = np.where(y_pred_all == sorted_y[i])
+                      sorted_title[i] = docid_all[ind[0]]
+                      
+                    if(qid in sorted_title[0]):
+                      print("@1:yes")
+                    if(qid in sorted_title[:5]):
+                      print("@5:yes")
+                    if(qid in sorted_title[:10]):
+                      print("@10:yes")
+                    if(qid in sorted_title[:50]):
+                      print("@50:yes")
+                    '''
+
+                      
                     wp.flush()
 
         with open(self.pred_file + '.features', 'wb') as wp:
@@ -361,4 +380,5 @@ class Experiment:
         with open(self.pred_file + '.hidden_features', 'wb') as wp:
             pickle.dump(feature_dict, wp)
         return evaler.summary()
+
 
