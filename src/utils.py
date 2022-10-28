@@ -190,6 +190,8 @@ class Evaluater:
 
 
 class Corpus:
+
+  '''
     def __init__(self, file_name, FLAGS):
         self.read_file(file_name)
 
@@ -204,19 +206,54 @@ class Corpus:
                 # Dump into corpus.
                 self.corpus[data['docid']] = data['ss']
         self.doc_list = list(self.corpus.keys())
+  ''' 
+  def __init__(self, multidoc2dial_doc, FLAGS):
+     self.read_file(multidoc2dial_doc)
 
-    def get(self, docid):
+  def   read_file(self, multidoc2dial_doc):  
+        self.corpus = {}
+        for doc_idx1 in multidoc2dial_doc['doc_data']:
+             for doc_idx2 in multidoc2dial_doc['doc_data'][doc_idx1]:
+                 s = (multidoc2dial_doc['doc_data'][doc_idx1]\
+                                          [doc_idx2]['doc_text'].strip())
+                 title = (multidoc2dial_doc['doc_data'][doc_idx1]\
+                                          [doc_idx2]['doc_id'].strip())                         
+                 #self.title_to_domain[doc_idx2] = doc_idx1
+                 s = s.replace('!', '.')
+                 s = s.replace('! ', '.')
+                 s = s.replace('?', '.')
+                 s = s.replace('? ', '.')
+                 s = s.replace('\n', '. ')
+                 s = s.replace(';', '.')
+                 m = s.split('. ')
+                 S = ""
+                 func = lambda w: w[:1].lower() + w[1:] if w else ''
+                 for word in m:
+                     S = S + func(word) + ' '
+                 doc_text = S
+                 print(title)
+                 self.corpus[doc_idx2] = sent_tokenize(title + '.' + doc_text)  #shall i add the title too?
+        self.doc_list = list(self.corpus.keys())
+       # for k, v in self.corpus.items():
+       #      print(k, v)
+       
+  def get(self, docid):
         if docid in self.corpus:
-            return self.corpus[docid]
+          #ind = self.titles.index(docid)
+          return self.corpus[docid]
         else:
             return self.sample()
 
-    def sample(self):
-        return self.get(random.choice(self.doc_list))
+  def sample(self):
+        return self.get(random.choice(self.doc_list))  
+
+  def corpus_returner(self):
+    return self.corpus
+
 
 
 class Data:
-    def __init__(self, file_prefix, corpus, FLAGS):
+    def __init__(self, multidoc2dial_dial, corpus, FLAGS):
         # Data-related hyperparameters.
         self.max_seq_len = FLAGS.max_seq_len
         self.max_sent_num = FLAGS.max_sent_num
@@ -245,7 +282,8 @@ class Data:
         self.neg_records = []
         self.neg_lookup = defaultdict(list)
         self.candidates = defaultdict(list)
-
+        
+        '''
         # Read qrels.
         qrels_file = file_prefix + '-qrels.tsv'
         lc = get_line_number(qrels_file)
@@ -256,7 +294,8 @@ class Data:
                 self.qrels[(qid, docid)] = int(r)
                 self.qrels_by_q[qid].append((docid, int(r)))
                 self.qrels_qid.add(qid)
-
+        '''
+        '''
         # Read queries.
         query_file = file_prefix + '-queries.tsv'
         lc = get_line_number(query_file)
@@ -265,7 +304,17 @@ class Data:
                 qid, q = line.split('\t')
                 if qid not in self.qrels_qid: continue
                 self.query[qid.strip()] = q.strip()
+        '''
+        # Read queries.
+        for doc_idx1 in multidoc2dial_dial['dial_data']:
+            for dial in multidoc2dial_dial['dial_data'][doc_idx1]:
+                for turns in dial['turns']:
+                   if turns['role'] == "user":
+                      doc_sentence_test = turns['utterance']
+                      doc_label_test = turns['references'][0]['doc_id']
+                      self.query[doc_label_test] = sent_tokenize(doc_sentence_test)
 
+        '''
         # Read top-100 candidates.
         can_file = file_prefix + '-top100'
         lc = get_line_number(can_file)
@@ -284,7 +333,8 @@ class Data:
         for qid in self.candidates:
             self.candidates[qid] = self.candidates[qid][:100]
 
-
+        '''
+        '''
         # Validation.
         to_del = []
         for qid in self.query:
@@ -293,7 +343,8 @@ class Data:
                 to_del.append(qid)
         for x in to_del:
             del self.query[qid]
-        
+        '''
+
     def get_qid_list(self, num_sample_eval):
         if num_sample_eval <= 0:
             return list(self.query.keys())
@@ -319,7 +370,7 @@ class Data:
         else:
             # Query tokens.
             input_ids = [0] # Global attention token.
-            input_ids.extend(self.tokenizer.encode(query_text))
+            input_ids.extend(self.tokenizer.encode(query_text, truncation=True))
             QL = len(input_ids)
 
         # Sentence tokens.
@@ -332,7 +383,7 @@ class Data:
             sent_mask.append([1.0])
             # Add the global attention token and sent tokens.
             input_ids.append(0)
-            input_ids.extend(self.tokenizer.encode(sents[sid]))
+            input_ids.extend(self.tokenizer.encode(sents[sid], truncation=True))
             sid += 1
             if sid == len(sents): break
         last_pos = len(input_ids)
@@ -448,10 +499,16 @@ class Data:
                     batch['sent_mask'], dtype=torch.float)}
     
     def eval_qid_batch_iter(self, qid, onlyrel=False):
-        assert(qid in self.candidates)
+        #assert(qid in self.candidates)
+        returned_corpus = self.corpus.corpus_returner()
+        for k in returned_corpus:
+          print(k)
+        assert(qid in returned_corpus.keys())
         cur_batch = self.create_empty_batch()
-        for docid in self.candidates[qid]:
-            rel = self.qrels[(qid, docid)]
+        #for docid in self.candidates[qid]: #any text and thus any docid in corpus
+        for docid in returned_corpus.keys():
+            #rel = self.qrels[(qid, docid)]
+            rel = 1  #dummy
             if rel == 0 and onlyrel: continue
             self.push_data_into_batch(rel, qid, docid, cur_batch)
             if len(cur_batch['label']) >= self.batch_size:
@@ -459,7 +516,7 @@ class Data:
                 cur_batch = self.create_empty_batch()
 
         if len(cur_batch['label']) > 0:
-            yield self.to_tensor(cur_batch), cur_batch['rel']
+            yield self.to_tensor(cur_batch), cur_batch['rel'] 
         
 
     def batch_iter(self):
