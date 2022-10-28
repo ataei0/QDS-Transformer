@@ -232,7 +232,7 @@ class Corpus:
                      S = S + func(word) + ' '
                  doc_text = S
                  print(title)
-                 self.corpus[doc_idx2] = sent_tokenize(title + '.' + doc_text)  #shall i add the title too?
+                 self.corpus[doc_idx2] = sent_tokenize(title + '.' + doc_text)  
         self.doc_list = list(self.corpus.keys())
        # for k, v in self.corpus.items():
        #      print(k, v)
@@ -334,6 +334,13 @@ class Data:
             self.candidates[qid] = self.candidates[qid][:100]
 
         '''
+        # Read top 50 candidates:
+        with open('/content/candidate.txt', 'r') as csvfile:
+           matrixreader = csv.reader(csvfile, delimiter=' ')
+           for row in matrixreader:
+              i = row + 2
+              qid = doc_label_test[i]
+              self.candidates[qid].append(row)
         '''
         # Validation.
         to_del = []
@@ -499,14 +506,16 @@ class Data:
                     batch['sent_mask'], dtype=torch.float)}
     
     def eval_qid_batch_iter(self, qid, onlyrel=False):
+
         #assert(qid in self.candidates)
-        returned_corpus = self.corpus.corpus_returner()
-        for k in returned_corpus:
-          print(k)
-        assert(qid in returned_corpus.keys())
+        #returned_corpus = self.corpus.corpus_returner()
+        #for k in returned_corpus:
+        #  print(k)
+        #assert(qid in returned_corpus.keys())
         cur_batch = self.create_empty_batch()
         #for docid in self.candidates[qid]: #any text and thus any docid in corpus
-        for docid in returned_corpus.keys():
+        #for docid in returned_corpus.keys():
+        for docid in self.candidates[qid]:
             #rel = self.qrels[(qid, docid)]
             rel = 1  #dummy
             if rel == 0 and onlyrel: continue
