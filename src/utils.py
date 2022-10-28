@@ -17,7 +17,7 @@ import torch.nn as nn
 from transformers import RobertaTokenizer
 
 import transformers 
-
+import csv
 
 def handle_flags():
     # Data configuration.
@@ -50,7 +50,7 @@ def handle_flags():
     flags.DEFINE_string('pred_file', None, 'path of prediction')
     flags.DEFINE_integer('last_epoch',
             0, 'Last epoch for the loaded model (default: 0)')
-    flags.DEFINE_integer('batch_size', 1, 'Batch Size (default: 1)')
+    flags.DEFINE_integer('batch_size', 16, 'Batch Size (default: 1)')
     flags.DEFINE_integer('num_epochs',
             10, 'Number of training epochs (default: 10)')
     flags.DEFINE_integer('random_seed',
@@ -212,12 +212,14 @@ class Corpus:
 
   def   read_file(self, multidoc2dial_doc):  
         self.corpus = {}
+        self.titles = []
         for doc_idx1 in multidoc2dial_doc['doc_data']:
              for doc_idx2 in multidoc2dial_doc['doc_data'][doc_idx1]:
                  s = (multidoc2dial_doc['doc_data'][doc_idx1]\
                                           [doc_idx2]['doc_text'].strip())
                  title = (multidoc2dial_doc['doc_data'][doc_idx1]\
-                                          [doc_idx2]['doc_id'].strip())                         
+                                          [doc_idx2]['doc_id'].strip())   
+                 self.titles.append(title)                      
                  #self.title_to_domain[doc_idx2] = doc_idx1
                  s = s.replace('!', '.')
                  s = s.replace('! ', '.')
@@ -306,14 +308,20 @@ class Data:
                 self.query[qid.strip()] = q.strip()
         '''
         # Read queries.
+        doc_sentence_test = []
+        doc_label_test = []
         for doc_idx1 in multidoc2dial_dial['dial_data']:
             for dial in multidoc2dial_dial['dial_data'][doc_idx1]:
                 for turns in dial['turns']:
                    if turns['role'] == "user":
-                      doc_sentence_test = turns['utterance']
-                      doc_label_test = turns['references'][0]['doc_id']
-                      self.query[doc_label_test] = sent_tokenize(doc_sentence_test)
-
+                      sentence_test = turns['utterance']
+                      label_test = turns['references'][0]['doc_id']
+                      self.query[label_test] = sent_tokenize(sentence_test)
+                      doc_sentence_test.append(turns['utterance'].lower())
+                      doc_label_test.append(turns['references'][0]['doc_id'])
+                      
+        print(len(doc_label_test))
+        print(len(doc_sentence_test))
         '''
         # Read top-100 candidates.
         can_file = file_prefix + '-top100'
@@ -337,10 +345,15 @@ class Data:
         # Read top 50 candidates:
         with open('/content/candidate.txt', 'r') as csvfile:
            matrixreader = csv.reader(csvfile, delimiter=' ')
+           i = 0
            for row in matrixreader:
-              i = row + 2
+              
               qid = doc_label_test[i]
-              self.candidates[qid].append(row)
+              if i==0 or i==1:
+                  self.candidates[qid].append(self.corpus.titles)
+              else:
+                  self.candidates[qid].append(row)  
+              i += 1
         '''
         # Validation.
         to_del = []
@@ -550,4 +563,3 @@ class Data:
 
         if len(cur_batch['label']) > 0:
             yield self.to_tensor(cur_batch)
-
