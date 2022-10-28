@@ -7,6 +7,8 @@ import copy
 
 import transformers
 from longformer.longformer import Longformer, LongformerConfig
+from transformers import LongformerModel
+model = LongformerModel.from_pretrained('allenai/longformer-base-4096', gradient_checkpointing=True)
 
 import utils
 
@@ -21,7 +23,7 @@ class QDSTModel(torch.nn.Module):
 
     def construct_components(self):
         # Base model.
-        self.base = Longformer.from_pretrained('longformer-base-4096/')
+        self.base = model
         self.hidden_layer = nn.Linear(
                 self.base.config.hidden_size,
                 self.base.config.hidden_size, bias=True)
