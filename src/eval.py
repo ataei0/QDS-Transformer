@@ -26,10 +26,10 @@ def main(argv):
     np.random.seed(FLAGS.random_seed)
     torch.manual_seed(FLAGS.random_seed)
     # Configuration and paths.
-    cfg = yaml.load(open(FLAGS.config, 'r'), Loader=yaml.BaseLoader)
-    PATH_DATA = cfg['path_data'] 
-    PATH_CORPUS = '{}/{}'.format(PATH_DATA, cfg['corpus'])
-    PATH_DATA_PREFIX = '{}/{}'.format(PATH_DATA, cfg['data_prefix'])
+    cfg = yaml.load(open('/content/QDS-Transformer/src/config.yml', 'r'), Loader=yaml.BaseLoader)
+    #PATH_DATA = cfg['path_data'] 
+    #PATH_CORPUS = '{}/{}'.format(PATH_DATA, cfg['corpus'])
+    #PATH_DATA_PREFIX = '{}/{}'.format(PATH_DATA, cfg['data_prefix'])
 
     # Set up the experimental environment.
     exp = experiment.Experiment(FLAGS, cfg, dumpflag=False)
@@ -38,9 +38,16 @@ def main(argv):
         layer.attention.self.attention_window = FLAGS.window_size
 
     # Load the corpus.
-    corpus = utils.Corpus(PATH_CORPUS, FLAGS)
+    import json
+    with open('/content/multidoc2dial/multidoc2dial_doc.json', 'r') as f:
+        multidoc2dial_doc = json.load(f)
+    corpus = utils.Corpus(multidoc2dial_doc, FLAGS)
     # Load train/dev data.
-    test_data = utils.Data(PATH_DATA_PREFIX + 'test', corpus, FLAGS)
+    #with open('/content/multidoc2dial/multidoc2dial_dial_test.json', 'r') as f:
+    #    multidoc2dial_dial_test = json.load(f)
+    with open('/content/multidoc2dial/multidoc2dial_dial_validation.json', 'r') as f:
+        multidoc2dial_dial_validation = json.load(f)
+    test_data = utils.Data(multidoc2dial_dial_validation, corpus, FLAGS)
     
 
     # Evaluate dev data.
@@ -51,4 +58,5 @@ def main(argv):
 
 if __name__ == '__main__':
     app.run(main)
+
 
